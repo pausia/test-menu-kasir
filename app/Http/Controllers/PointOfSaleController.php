@@ -40,7 +40,7 @@ class PointOfSaleController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'price' => $product->price,
-                'quantity' => 0
+                'quantity' => 1
             ];
             $selectedProducts[] = $selectedProduct;
         }
