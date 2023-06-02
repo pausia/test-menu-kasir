@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -13,9 +12,13 @@ class PointOfSaleController extends Controller
         // Mendapatkan data produk dari database
         $products = Product::all();
 
-        // Mengirim data produk ke halaman point-of-sale
-        return view('point-of-sale.point-of-sale', compact('products'));
+        // Mengambil total harga dari sesi atau database
+        $totalPrice = session()->get('total_price', 0);
+
+        // Mengirim data produk dan total harga ke halaman point-of-sale
+        return view('point-of-sale.point-of-sale', compact('products', 'totalPrice'));
     }
+
     public function addToTotal(Request $request)
     {
         $productId = $request->input('product_id');
@@ -25,11 +28,9 @@ class PointOfSaleController extends Controller
             return response()->json(['message' => 'Product not found'], 404);
         }
 
-        // Simpan data produk yang ditambahkan ke dalam sesi atau database
-        // Sesuaikan kode ini dengan logika penyimpanan data Anda
-        // Contoh menggunakan sesi:
-        $selectedProducts = session()->get('selected_products', []);
-        $selectedProduct = Arr::first($selectedProducts, function ($item) use ($productId) {
+        // Mendapatkan data produk dari sesi atau database
+        $products = session()->get('selected_products', []);
+        $selectedProduct = Arr::first($products, function ($item) use ($productId) {
             return $item['id'] == $productId;
         });
 
@@ -42,14 +43,21 @@ class PointOfSaleController extends Controller
                 'price' => $product->price,
                 'quantity' => 1
             ];
-            $selectedProducts[] = $selectedProduct;
+            $products[] = $selectedProduct;
         }
 
-        session()->put('selected_products', $selectedProducts);
+        session()->put('selected_products', $products);
 
-        return response()->json(['message' => 'Product added to total'], 200);
+        // Menghitung total harga dari produk yang telah ditambahkan
+        $totalPrice = 0;
+        foreach ($products as $product) {
+            $totalPrice += $product['price'] * $product['quantity'];
+        }
+
+        // Menyimpan total harga ke dalam sesi atau database
+        session()->put('total_price', $totalPrice);
+
+        return response()->json(['message' => 'Product added to total', 'totalPrice' => $totalPrice], 200);
     }
-
-
-
 }
+

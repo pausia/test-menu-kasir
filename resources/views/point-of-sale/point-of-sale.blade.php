@@ -37,21 +37,40 @@
                         </tr>
                     </thead>
                     <tbody id="total-table-body">
-                        <!-- Table rows will be dynamically added here -->
+                        <!-- Table rows for selected products -->
                         @foreach ($products as $product)
                             <tr>
-                                <td>{{ $product->name }}</td>
-                                <td data-product-price="{{ $product->price }}" id="price-{{ $product->id }}">
-                                    ${{ $product->price }}</td>
-                                <td id="quantity-{{ $product->id }}">{{ $product->quantity }}</td>
+                                <td>{{ $product['name'] }}</td>
+                                <td>{{ $product['price'] }}</td>
+                                <td>{{ $product['quantity'] }}</td>
                             </tr>
                         @endforeach
+                        <!-- Table row for total price -->
+                        <tr>
+                            <td><strong>Total</strong></td>
+                            <td><strong>${{ $totalPrice }}</strong></td>
+                            <td></td>
+                        </tr>
                     </tbody>
                 </table>
                 @else
                 <p>No products selected.</p>
                 @endif
                 <div class="text-center">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Total</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Total</td>
+                                <td id="total-price"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                     <button class="btn btn-primary">Save Bill</button>
                     <button class="btn btn-primary">Print Bill</button>
                 </div>
@@ -75,36 +94,34 @@
 
         // Fungsi untuk mengirim permintaan POST ke metode addToTotal di controller
         function addToTotal(productId, quantityToAdd) {
-        fetch('/add-to-total', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({
-            product_id: productId,
-            quantity: quantityToAdd
+            fetch('/add-to-total', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: quantityToAdd
+                })
             })
-        })
-            .then(function (response) {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error('Error: ' + response.status);
-            }
-            })
-            .then(function (data) {
-            console.log(data.message);
-            updateQuantity(productId, quantityToAdd);
-            updatePrice(productId, quantityToAdd, data.newQuantity); // Memperbarui pemanggilan fungsi dengan newQuantity
-            })
-            .catch(function (error) {
-            console.log(error);
-            });
+                .then(function (response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Error: ' + response.status);
+                    }
+                })
+                .then(function (data) {
+                    console.log(data.message);
+                    updateQuantity(productId, quantityToAdd);
+                    updatePrice(productId, quantityToAdd, data.newQuantity); // Memperbarui pemanggilan fungsi dengan newQuantity
+                    updateTotalPrice(); // Memperbarui total harga
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
         }
-
-
-
 
         // Fungsi untuk memperbarui jumlah produk di tabel total
         function updateQuantity(productId, quantityToAdd) {
@@ -117,17 +134,25 @@
 
         // Fungsi untuk memperbarui harga produk di tabel total
         function updatePrice(productId, quantityToAdd) {
-        var priceElement = document.querySelector('#price-' + productId);
-        var currentPrice = parseFloat(priceElement.getAttribute('data-product-price'));
-        var currentQuantity = parseInt(document.querySelector('#quantity-' + productId).textContent);
-        var newQuantity = currentQuantity + quantityToAdd;
-        var newPrice = currentPrice * newQuantity;
+            var priceElement = document.getElementById('price-' + productId);
+            var currentPrice = parseFloat(priceElement.textContent);
+            var newPrice = currentPrice * quantityToAdd;
 
-        priceElement.textContent = '$' + newPrice.toFixed(2); // Menampilkan newPrice dalam format "$x.xx"
-    }
+            priceElement.textContent = newPrice.toFixed(2);
+        }
 
+        // Fungsi untuk memperbarui total harga di tabel total
+        function updateTotalPrice() {
+            var totalPrice = 0;
+            var priceElements = document.querySelectorAll('#total-table-body td:nth-child(2)');
+            
+            priceElements.forEach(function (priceElement) {
+                totalPrice += parseFloat(priceElement.textContent);
+            });
 
-
+            var totalPriceElement = document.getElementById('total-price');
+            totalPriceElement.textContent = '$' + totalPrice.toFixed(2);
+        }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
