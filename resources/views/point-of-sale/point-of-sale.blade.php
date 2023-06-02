@@ -19,6 +19,7 @@
                             <h5 class="card-title" id="name-{{ $product->id }}">{{ $product->name }}</h5>
                             <p class="card-text">Price: $<span id="price-{{ $product->id }}">{{ $product->price }}</span></p>
                             <a href="#" class="btn btn-primary" data-product-id="{{ $product->id }}" data-product-quantity="{{ $product->quantity }}">Tambah</a>
+                            <button class="btn btn-danger btn-delete" data-product-id="{{ $product->id }}">Hapus</button> <!-- Tombol Hapus -->
                         </div>
                     </div>
                 </div>
@@ -34,6 +35,7 @@
                             <th scope="col">Product</th>
                             <th scope="col">Price</th>
                             <th scope="col">Quantity</th>
+                            <th scope="col">Action</th> <!-- Kolom Aksi -->
                         </tr>
                     </thead>
                     <tbody id="total-table-body">
@@ -42,7 +44,8 @@
                             <tr>
                                 <td>{{ $product['name'] }}</td>
                                 <td>{{ $product['price'] }}</td>
-                                <td>{{ $product['quantity'] }}</td>
+                                <td id="quantity-{{ $product['id'] }}">{{ $product['quantity'] }}</td>
+                                <td><button class="btn btn-danger btn-delete" data-product-id="{{ $product['id'] }}">Hapus</button></td> <!-- Tombol Hapus -->
                             </tr>
                         @endforeach
                         <!-- Table row for total price -->
@@ -50,6 +53,7 @@
                             <td><strong>Total</strong></td>
                             <td><strong>${{ $totalPrice }}</strong></td>
                             <td></td>
+                            <td></td> <!-- Kolom kosong untuk konsistensi tampilan -->
                         </tr>
                     </tbody>
                 </table>
@@ -115,8 +119,8 @@
                 .then(function (data) {
                     console.log(data.message);
                     updateQuantity(productId, quantityToAdd);
-                    updatePrice(productId, quantityToAdd, data.newQuantity); // Memperbarui pemanggilan fungsi dengan newQuantity
-                    updateTotalPrice(); // Memperbarui total harga
+                    updatePrice(productId, quantityToAdd, data.newQuantity);
+                    updateTotalPrice();
                 })
                 .catch(function (error) {
                     console.log(error);
@@ -152,6 +156,53 @@
 
             var totalPriceElement = document.getElementById('total-price');
             totalPriceElement.textContent = '$' + totalPrice.toFixed(2);
+        }
+
+        // Mendapatkan semua elemen tombol "Hapus"
+        var deleteButtons = document.querySelectorAll('.btn-delete');
+
+        // Menambahkan event listener untuk setiap tombol "Hapus"
+        deleteButtons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                var productId = button.getAttribute('data-product-id');
+                deleteFromTotal(productId);
+            });
+        });
+
+        // Fungsi untuk mengirim permintaan POST ke metode deleteFromTotal di controller
+        function deleteFromTotal(productId) {
+            fetch('/delete-from-total', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    product_id: productId
+                })
+            })
+                .then(function (response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Error: ' + response.status);
+                    }
+                })
+                .then(function (data) {
+                    console.log(data.message);
+                    removeProduct(productId);
+                    updateTotalPrice();
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        }
+
+        // Fungsi untuk menghapus produk dari tabel total
+        function removeProduct(productId) {
+            var productRow = document.querySelector('#total-table-body tr[data-product-id="' + productId + '"]');
+            productRow.remove();
         }
     </script>
 
